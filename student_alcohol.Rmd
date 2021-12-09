@@ -1,0 +1,704 @@
+---
+title: "Student Alcohol Consumption"
+author: "Vicki Nomwesigwa"
+date: "11/8/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, echo=F, include=FALSE}
+library(ggplot2)
+library(tinytex)
+library(xtable)
+library(dplyr )
+library(rms)
+library(pROC)
+library(kableExtra)
+library(tidyr)
+```
+
+## DATA WRANGLING
+
+#### Read the data
+
+```{r, echo=FALSE}
+student_math <- read.csv("data/student-mat.csv")
+student_por <- read.csv("data/student-por.csv")
+```
+
+```{r, echo=FALSE}
+head(student_math)
+dim(student_math)
+summary(student_math)
+```
+Math: 395 rows, 33 columns
+
+```{r, echo=FALSE}
+student_math$school <- factor(student_math$school,levels=c("GP","MS"),labels=c("GP","MS"))
+student_math$sex <- factor(student_math$sex,levels=c("F","M"),labels=c("F","M"))
+student_math$age <- as.numeric(student_math$age)
+student_math$address <- factor(student_math$address,levels=c("U","R"))
+student_math$famsize <- factor(student_math$famsize,levels=c("LE3","GT3"))
+student_math$Pstatus <- factor(student_math$Pstatus,levels=c("T","A"))
+student_math$Medu <- factor(student_math$Medu,levels=c(0,1,2,3,4), labels=c("None", "Primary Education (4th grade)", "5th to 9th grade", "Secondary Education", "Higher Education"))
+student_math$Fedu <- factor(student_math$Fedu,levels=c(0,1,2,3,4), labels=c("None", "Primary Education (4th grade)", "5th to 9th grade", "Secondary Education", "Higher Education"))
+student_math$Mjob <- factor(student_math$Mjob,levels=c("teacher","health","services","at_home","other"))
+student_math$Fjob <- factor(student_math$Fjob,levels=c("teacher","health","services","at_home","other"))
+student_math$reason <- factor(student_math$reason,levels=c("home","reputation","course","other"))
+student_math$nursery <- factor(student_math$nursery,levels=c("yes","no"))
+student_math$internet <- factor(student_math$internet,levels=c("yes","no"))
+student_math$guardian <- factor(student_math$guardian,levels=c("mother","father", "other"))
+student_math$traveltime <- factor(student_math$traveltime,levels=c(1,2,3,4), labels=c("<15 min.", "15 to 30 min.", "30 min. to 1 hour", ">1 hour"))
+student_math$studytime <- factor(student_math$studytime,levels=c(1,2,3,4), labels=c("<2 hours", "2 to 5 hours", "5 to 10 hours", ">10 hours"))
+student_math$failures <- as.numeric(student_math$failures)
+student_math$schoolsup <- factor(student_math$schoolsup,levels=c("yes","no"))
+student_math$famsup <- factor(student_math$famsup,levels=c("yes","no"))
+student_math$paid <- factor(student_math$paid,levels=c("yes","no"))
+student_math$activities <- factor(student_math$activities,levels=c("yes","no"))
+student_math$romantic <- factor(student_math$romantic,levels=c("yes","no"))
+student_math$higher <- factor(student_math$higher,levels=c("yes","no"))
+student_math$famrel <- factor(student_math$famrel,levels=c(1,2,3,4,5), labels=c("very bad", "bad", "fair", "good", "excellent"))
+student_math$freetime <- factor(student_math$freetime,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_math$goout <- factor(student_math$goout,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_math$Dalc <- factor(student_math$Dalc,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_math$Walc <- factor(student_math$Walc,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_math$health <- factor(student_math$health,levels=c(1,2,3,4,5), labels=c("very bad", "bad", "fair", "good", "very good"))
+student_math$absences <- as.numeric(student_math$absences)
+student_math$G1 <- as.numeric(student_math$G1)
+student_math$G2 <- as.numeric(student_math$G2)
+student_math$G3 <- as.numeric(student_math$G3)
+str(student_math)
+```
+
+```{r, echo=FALSE}
+head(student_por)
+dim(student_por)
+summary(student_por)
+```
+
+Por: 649 rows, 33 Columns
+
+```{r, echo=FALSE}
+student_por$school <- factor(student_por$school,levels=c("GP","MS"),labels=c("GP","MS"))
+student_por$sex <- factor(student_por$sex,levels=c("F","M"),labels=c("F","M"))
+student_por$age <- as.numeric(student_por$age)
+student_por$address <- factor(student_por$address,levels=c("U","R"))
+student_por$famsize <- factor(student_por$famsize,levels=c("LE3","GT3"))
+student_por$Pstatus <- factor(student_por$Pstatus,levels=c("T","A"))
+student_por$Medu <- factor(student_por$Medu,levels=c(0,1,2,3,4), labels=c("None", "Primary Education (4th grade)", "5th to 9th grade", "Secondary Education", "Higher Education"))
+student_por$Fedu <- factor(student_por$Fedu,levels=c(0,1,2,3,4), labels=c("None", "Primary Education (4th grade)", "5th to 9th grade", "Secondary Education", "Higher Education"))
+student_por$Mjob <- factor(student_por$Mjob,levels=c("teacher","health","services","at_home","other"))
+student_por$Fjob <- factor(student_por$Fjob,levels=c("teacher","health","services","at_home","other"))
+student_por$reason <- factor(student_por$reason,levels=c("home","reputation","course","other"))
+student_por$nursery <- factor(student_por$nursery,levels=c("yes","no"))
+student_por$internet <- factor(student_por$internet,levels=c("yes","no"))
+student_por$guardian <- factor(student_por$guardian,levels=c("mother","father", "other"))
+student_por$traveltime <- factor(student_por$traveltime,levels=c(1,2,3,4), labels=c("<15 min.", "15 to 30 min.", "30 min. to 1 hour", ">1 hour"))
+student_por$studytime <- factor(student_por$studytime,levels=c(1,2,3,4), labels=c("<2 hours", "2 to 5 hours", "5 to 10 hours", ">10 hours"))
+student_por$failures <- as.numeric(student_por$failures)
+student_por$schoolsup <- factor(student_por$schoolsup,levels=c("yes","no"))
+student_por$famsup <- factor(student_por$famsup,levels=c("yes","no"))
+student_por$paid <- factor(student_por$paid,levels=c("yes","no"))
+student_por$activities <- factor(student_por$activities,levels=c("yes","no"))
+student_por$romantic <- factor(student_por$romantic,levels=c("yes","no"))
+student_por$higher <- factor(student_por$higher,levels=c("yes","no"))
+student_por$famrel <- factor(student_por$famrel,levels=c(1,2,3,4,5), labels=c("very bad", "bad", "fair", "good", "excellent"))
+student_por$freetime <- factor(student_por$freetime,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_por$goout <- factor(student_por$goout,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_por$Dalc <- factor(student_por$Dalc,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_por$Walc <- factor(student_por$Walc,levels=c(1,2,3,4,5), labels=c("very low", "low", "neutral", "high", "very high"))
+student_por$health <- factor(student_por$health,levels=c(1,2,3,4,5), labels=c("very bad", "bad", "fair", "good", "very good"))
+student_por$absences <- as.numeric(student_por$absences)
+student_por$G1 <- as.numeric(student_por$G1)
+student_por$G2 <- as.numeric(student_por$G2)
+student_por$G3 <- as.numeric(student_por$G3)
+str(student_por)
+```
+
+#### Merge data(get students who take both classes)
+merged: 382 rows, 53 columns
+```{r, echo=FALSE}
+d1=merge(student_math,student_por,by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"), suffixes = c("_math","_por"))
+head(d1)
+dim(d1)
+str(d1)
+```
+
+#### EDA MATH
+```{r, echo=FALSE}
+# looks pretty normal, log transformation does not improve it
+# select students who do not have a 0 in the final grade
+student_math <- subset(student_math, student_math$G3 != 0)
+
+ggplot(student_math, aes(x=G3)) +
+ geom_histogram(aes(y=..density..), colour="black", fill="white")+
+ geom_density(alpha=.25, fill="lightblue") +
+ scale_fill_brewer(palette="Blues") +
+ labs(title="Distribution of Final Grade",y="Final Grade") +
+ theme_classic() + theme(legend.position="none")
+
+# ggplot(student_math, aes(x=log(G3))) +
+#  geom_histogram(aes(y=..density..), colour="black", fill="white")+
+#  geom_density(alpha=.25, fill="lightblue") +
+#  scale_fill_brewer(palette="Blues") +
+#  labs(title="Distribution of Final Grade",y="Final Grade") +
+#  theme_classic() + theme(legend.position="none")
+                                          
+```
+
+```{r, echo=FALSE}
+# some difference in means
+ggplot(student_math, aes(x=school, y=G3, fill=school)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in GS vs MS schools",
+       x="School",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=sex, y=G3, fill=sex)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Males vs Females",
+       x="School",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# not linear, there is a curvy trend
+ggplot(student_math, aes(x=age, y=G3)) +
+  geom_point() +
+  labs(title="Final Grade vs age") +
+  theme_classic() + theme(legend.position="none") +
+  geom_smooth(method="lm", col="red3")
+
+
+# consider changing absences to log for linearity, almost linear
+ggplot(student_math, aes(x=absences, y=G3)) +
+  geom_point() +
+  labs(title="Final Grade vs Absences") +
+  theme_classic() + theme(legend.position="none") +
+  geom_smooth(method="lm", col="red3")
+
+# almost linear
+ggplot(student_math, aes(x=G1, y=G3)) +
+  geom_point() +
+  labs(title="Final Grade vs G1") +
+  theme_classic() + theme(legend.position="none") +
+  geom_smooth(method="lm", col="red3") 
+
+# almost linear, look out for curve trend at the start
+ggplot(student_math, aes(x=G2, y=G3)) +
+  geom_point() +
+  labs(title="Final Grade vs G2") +
+  theme_classic() + theme(legend.position="none") +
+  geom_smooth(method="lm", col="red3")
+
+# failures not linear, not enough data, do not include in model
+ggplot(student_math, aes(x=failures, y=G3)) +
+  geom_point() +
+  labs(title="Final Grade vs Failures") +
+  theme_classic() + theme(legend.position="none") +
+  geom_smooth(col="red3")
+
+# some difference in means
+ggplot(student_math, aes(x=address, y=G3, fill=address)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Urban vs Rural Addresses",
+       x="Address",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means, consider not modelling
+ggplot(student_math, aes(x=famsize, y=G3, fill=famsize)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Family Size",
+       x="Family Size",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means, consider not modelling
+ggplot(student_math, aes(x=Pstatus, y=G3, fill=Pstatus)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Parent Status",
+       x="Parent Status",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Medu, y=G3, fill=Medu)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Mother's Education",
+       x="Mother's Education",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Fedu, y=G3, fill=Fedu)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Father's Education",
+       x="Father's Education",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Mjob, y=G3, fill=Mjob)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Mother's Job",
+       x="Mother's Job",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Fjob, y=G3, fill=Fjob)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Father's Job",
+       x="Father's Job",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=reason, y=G3, fill=reason)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Reason",
+       x="Reason",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=guardian, y=G3, fill=guardian)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Guardian",
+       x="Guardian",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+#some difference in means
+ggplot(student_math, aes(x=traveltime, y=G3, fill=traveltime)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Travel Time",
+       x="Travel Time",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=studytime, y=G3, fill=studytime)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Study Time",
+       x="Study Time",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=schoolsup, y=G3, fill=schoolsup)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Schoolsup",
+       x="Schoolsup",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means
+ggplot(student_math, aes(x=famsup, y=G3, fill=famsup)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Famsup",
+       x="Famsup",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means
+ggplot(student_math, aes(x=paid, y=G3, fill=paid)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Paid",
+       x="Paid",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means
+ggplot(student_math, aes(x=activities, y=G3, fill=activities)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Acitivities",
+       x="Activities",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=higher, y=G3, fill=higher)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Higher",
+       x="Higher",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=internet, y=G3, fill=internet)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Internet",
+       x="Internet",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means
+ggplot(student_math, aes(x=nursery, y=G3, fill=nursery)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Nursery",
+       x="Nursery",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# no difference in means
+ggplot(student_math, aes(x=romantic, y=G3, fill=romantic)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Romantic",
+       x="Romantic",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=famrel, y=G3, fill=famrel)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Famrel",
+       x="Famrel",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=freetime, y=G3, fill=freetime)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Free Time",
+       x="Free Time",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=goout, y=G3, fill=goout)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Go Out",
+       x="Go Out",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Dalc, y=G3, fill=Dalc)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Week Day Alcohol Consumption",
+       x="Week Day Alcohol Consumption",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=Walc, y=G3, fill=Walc)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Weekend Alcohol Consumption",
+       x="Weekend Alcohol Consumption",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+# some difference in means
+ggplot(student_math, aes(x=health, y=G3, fill=health)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Health",
+       x="Health",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")
+
+```
+
+## Interactions
+```{r, echo=F}
+#need interaction
+ggplot(student_math, aes(x=school, y=G3, fill=school)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in GS vs MS schools by WeekDay Alcohol",
+       x="School",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Dalc,ncol=4)
+
+#need interaction
+ggplot(student_math, aes(x=school, y=G3, fill=school)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in GS vs MS schools by Weekend Alcohol",
+       x="School",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+
+#need interaction
+ggplot(student_math, aes(x=sex, y=G3, fill=sex)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Males vs Females by Weekend Alcohol",
+       x="Sex",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+# add interaction
+ggplot(student_math, aes(x=address, y=G3, fill=address)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Urban vs Rural Addresses by WeekDay Alcohol",
+       x="Address",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Dalc,ncol=4)
+
+# add interaction
+ggplot(student_math, aes(x=address, y=G3, fill=address)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade in Urban vs Rural Addresses by Weekend Alcohol",
+       x="Address",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+#some interaction
+ggplot(student_math, aes(x=reason, y=G3, fill=reason)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Reason by Weekend Alcohol",
+       x="Reason",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=studytime, y=G3, fill=studytime)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Study Time by WeekDay Alcohol",
+       x="Study Time",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")  +
+  facet_wrap( ~ Walc,ncol=4)
+
+
+# some interaction
+ggplot(student_math, aes(x=famsup, y=G3, fill=famsup)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Famsup by WeekDay Alcohol",
+       x="Famsup",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Dalc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=famsup, y=G3, fill=famsup)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Famsup by Weekend Alcohol",
+       x="Famsup",y="Final Grade") +
+  theme_classic() + theme(legend.position="none")  +
+  facet_wrap( ~ Walc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=romantic, y=G3, fill=romantic)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Romantic by WeekDay Alcohol",
+       x="Romantic",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Dalc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=romantic, y=G3, fill=romantic)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Romantic by Weekend Alcohol",
+       x="Romantic",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=freetime, y=G3, fill=freetime)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Free Time by Weekend Alcohol",
+       x="Free Time",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+# some interaction
+ggplot(student_math, aes(x=goout, y=G3, fill=goout)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Go Out by Weekend Alcohol",
+       x="Go Out",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+
+#some interaction
+ggplot(student_math, aes(x=health, y=G3, fill=health)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Reds") +
+  labs(title="Final Grade vs Health by Weekend Alcohol",
+       x="Health",y="Final Grade") +
+  theme_classic() + theme(legend.position="none") +
+  facet_wrap( ~ Walc,ncol=4)
+```
+
+```{r, echo=FALSE}
+student_math$G1_cent <- student_math$G1 - mean(student_math$G1)
+student_math$G2_cent <- student_math$G2 - mean(student_math$G2)
+math <- subset(student_math, select = -c(failures, age, G1, G2))
+```
+
+# Fit linear model
+
+```{r, echo=F}
+Model1 <- lm(G3 ~ . ,data=math)
+summary(Model1)
+```
+
+# Fit EDA model and significant values
+```{r, echo=F}
+Model2 <- lm(G3 ~ . - activities - romantic - famsize - Pstatus  - famsup  - paid - nursery ,data=math)
+summary(Model2)
+```
+# Model Assessment
+```{r, echo=F}
+# transformation needed
+ggplot(math, aes(x=absences, y=Model1$residual)) +
+  geom_point() +
+  labs(title="Residuals vs Absences") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+
+# transformation needed
+ggplot(math, aes(x=G1_cent, y=Model1$residual)) +
+  geom_point() +
+  labs(title="Residuals vs G1") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+
+# transformation needed
+ggplot(math, aes(x=G2_cent, y=Model1$residual)) +
+  geom_point() +
+  labs(title="Residuals vs G2") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+
+```
+
+```{r, echo=F}
+# transformation needed
+ggplot(math, aes(x=absences, y=Model2$residual)) +
+  geom_point() +
+  labs(title="Residuals vs Absences") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+
+# transformation needed
+ggplot(math, aes(x=G1_cent, y=Model2$residual)) +
+  geom_point() +
+  labs(title="Residuals vs G1") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+
+# transformation needed
+ggplot(math, aes(x=G2_cent, y=Model2$residual)) +
+  geom_point() +
+  labs(title="Residuals vs G2") +
+  theme_classic() + theme(legend.position="none") +
+  geom_hline(yintercept=0,col="red3")
+```
+
+```{r, echo=F}
+#Now some model assessment
+plot(Model1,which=1,col=c("blue4"))
+plot(Model1,which=2,col=c("blue4"))
+
+plot(Model1,which=5,col=c("blue4"))
+# anova(Model1, Model2)
+```
+
+```{r, echo=F}
+plot(Model2,which=1,col=c("blue4"))
+plot(Model2,which=2,col=c("blue4"))
+
+plot(Model2,which=5,col=c("blue4"))
+```
+
+# Model with interactions
+
+```{r, echo=F}
+Model3 <- lm(G3 ~ Walc*(school+sex+address+reason+famsup+romantic+goout+health) + Dalc*(school+studytime+romantic)+famrel+traveltime+G1_cent+G2_cent, data=math)
+summary(Model3)
+```
+
+```{r, echo=F}
+plot(Model3,which=1,col=c("blue4"))
+plot(Model3,which=2,col=c("blue4"))
+
+plot(Model3,which=5,col=c("blue4"))
+```
+
+# Stepwise AIC
+```{r, echo=F}
+NullModel <- lm(G3 ~ Dalc + Walc,data=math)
+Model_forward <- step(NullModel, scope = formula(Model1),direction="both",trace=0)
+summary(Model_forward)
+```
+# Stepwise BIC
+```{r, echo=F}
+n <- nrow(math)
+Model_forward2 <- step(NullModel, scope = formula(Model1),direction="both",trace=0,
+                      k = log(n))
+summary(Model_forward2)
+```
+
+```{r, echo=F}
+Model_forward3 <- step(NullModel, scope = formula(Model3),direction="both",trace=0)
+summary(Model_forward3)
+```
+
+$p(y_i|x_i) = \mathcal{N} (\beta_0 + \beta_1x_i_G2cent + \beta_1x_i_G1cent + \beta_1x_i_famrel +  \beta_1x_i_traveltime +  \beta_1x_i_absences +  \beta_1x_i_health + + \beta_1x_1_nursery)$
+$y_i = \beta_0 + \beta_1x_i + \beta_2x_iG1cent + \beta_1x_i_famrel +  \beta_1x_i_traveltime +  \beta_1x_i_absences +  \beta_1x_i_health + + \beta_1x_1_nursery)$
+
+```{r, echo=F}
+Model_forward4 <- step(NullModel, scope = formula(Model3),direction="both",trace=0,
+                      k = log(n))
+summary(Model_forward4)
+```
+
+```{r, echo=F}
+model5 <- lm(G3 ~ G2_cent + G1_cent + famrel + traveltime + absences + 
+    health + nursery, data = math)
+summary(model5)
+```
+
+```{r, echo=F}
+plot(model5,which=1,col=c("blue4"))
+plot(model5,which=2,col=c("blue4"))
+
+plot(model5,which=5,col=c("blue4"))
+```
+
+```{r, echo=F}
+model6 <- lm(G3 ~ G2_cent + G1_cent + famrel + traveltime + health, data = math)
+summary(model6)
+
+t = xtable(model6); print(t, comment=F);
+```
+
+```{r, echo=F}
+plot(model6,which=1:5,col=c("blue4"))
+```
+
+```{r, echo=F}
+anova(model5, model6)
+```
+
+```{r, echo=F}
+vif(model5)
+```
+
+```{r, echo=F}
+vif(model6)
+confint(model6,level = 0.95)
+```
+
+```{r, echo=F}
+invisible(roc(math$G3,fitted(model6),plot=T,print.thres="best",legacy.axes=T,
+    print.auc =T,col="red3"))
+```
